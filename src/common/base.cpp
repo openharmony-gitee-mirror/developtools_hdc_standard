@@ -20,7 +20,6 @@
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
 #include <openssl/md5.h>
-#include <random>
 #include <thread>
 #ifdef __MUSL__
 extern "C" {
@@ -49,7 +48,7 @@ namespace Base {
             threadIdString = "";
         } else {
             debugInfo = "[" + debugInfo + "]";
-            threadIdString = StringFormat("[%x]", std::hash<std::thread::id> {}(std::this_thread::get_id()));
+            threadIdString = StringFormat("[%x]", std::hash<std::thread::id>{}(std::this_thread::get_id()));
         }
     }
 
@@ -366,14 +365,7 @@ namespace Base {
     uint64_t GetRandom(const uint64_t min, const uint64_t max)
     {
         uint64_t ret;
-#ifdef HARMONY_PROJECT
         uv_random(nullptr, nullptr, &ret, sizeof(ret), 0, nullptr);
-#else
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<uint64_t> dis(min, max);
-        ret = dis(gen);
-#endif
         return ret;
     }
 
@@ -568,7 +560,9 @@ namespace Base {
         RunPipeComand(sBuf.c_str(), value, sizeOutBuf, true);
 #endif
 #else
-        GetParameter(key, "", value, sizeOutBuf - 1);
+        string sKey = key;
+        string sBuf = "getparam " + sKey;
+        RunPipeComand(sBuf.c_str(), value, sizeOutBuf, true);
 #endif
         value[sizeOutBuf - 1] = '\0';
         return true;
@@ -801,14 +795,14 @@ namespace Base {
 #ifdef HOST_MAC
         int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         if (ret == 0) {
-            for (auto i = 0; i < 2; ++i) {
-                if (fcntl(fds[i], F_SETFD, FD_CLOEXEC) == -1) {
-                    close(fds[0]);
-                    close(fds[1]);
-                    WRITE_LOG(LOG_WARN, "fcntl failed to set FD_CLOEXEC: %s", strerror(errno));
-                    return -1;
-                }
+          for (auto i = 0; i < 2; ++i) {
+            if (fcntl(fds[i], F_SETFD, FD_CLOEXEC) == -1) {
+              close(fds[0]);
+              close(fds[1]);
+              WRITE_LOG(LOG_WARN, "fcntl failed to set FD_CLOEXEC: %s", strerror(errno));
+              return -1;
             }
+          }
         }
         return ret;
 #else
